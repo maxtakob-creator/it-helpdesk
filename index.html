@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ระบบแจ้งปัญหาคอมพิวเตอร์ | Contrologic</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.39.0/js/msal-browser.min.js"></script>
+<style>
+*{box-sizing:border-box}
+:root{--p:#4f46e5;--b:#2563eb;--s:#0ea5e9;--bg:#f8fafc;--card:#ffffff;--t:#0f172a;--m:#64748b;--border:#e2e8f0}
+body{margin:0;font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--t);font-size:15px;line-height:1.5}
+header{background:linear-gradient(135deg,#1e3a8a 0%,#4f46e5 55%,#7c3aed 100%);color:#fff;padding:14px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 4px 14px #4f46e530}
+header .logo{font-size:28px;background:rgba(255,255,255,.18);border-radius:12px;padding:8px 14px;display:flex;align-items:center;justify-content:center}
+header h1{margin:0;font-size:20px;font-weight:700}header small{opacity:.9;font-size:13px}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.role-badge{font-size:13px;background:rgba(255,255,255,.2);padding:6px 14px;border-radius:20px;display:flex;align-items:center;gap:6px}
+.role-badge i{color:#4ade80;font-size:10px}
+.btn-logout{background:#ffffff22;border:1px solid #ffffff44;color:#fff;padding:6px 12px;border-radius:8px;font:inherit;font-size:13px;cursor:pointer}
+
+nav{display:flex;gap:4px;overflow-x:auto;background:#fff;padding:8px 16px;position:sticky;top:0;z-index:10;box-shadow:0 2px 10px #0000000d}
+nav button{border:0;background:none;padding:10px 16px;border-radius:10px;font:inherit;font-weight:600;white-space:nowrap;cursor:pointer;color:var(--m);display:flex;align-items:center;gap:8px;transition:all .2s;min-height:44px}
+nav button:hover{background:#f1f5f9;color:var(--t)}
+nav button.a{background:linear-gradient(120deg,var(--b),var(--p));color:#fff;box-shadow:0 2px 8px #4f46e540}
+
+main{max-width:1200px;margin:0 auto;padding:20px 16px}
+.pg{display:none}.pg.a{display:block;animation:fadeIn .25s ease-in-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 2px 10px #0f172a08;border:1px solid var(--border);margin-bottom:20px}
+.card h3{margin:0 0 14px;font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.grid{display:grid;gap:14px}
+.stats{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.stat{color:#fff;border-radius:14px;padding:16px;box-shadow:0 4px 12px #00000010;transition:transform .2s}
+.stat:hover{transform:translateY(-2px)}
+.stat b{font-size:28px;display:block;line-height:1.2;font-weight:700}
+.stat span{font-size:13px;opacity:.95}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}
+
+label{font-weight:600;font-size:13.5px;display:block;margin-bottom:6px;color:#334155}
+input,select,textarea{width:100%;padding:11px 13px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;background:#fff;transition:border-color .2s;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--p);box-shadow:0 0 0 3px #4f46e51a}
+textarea{min-height:95px;resize:vertical}
+.btn{border:0;padding:11px 20px;border-radius:10px;font:inherit;font-weight:600;color:#fff;background:linear-gradient(120deg,var(--b),var(--p));cursor:pointer;display:inline-flex;align-items:center;gap:8px;justify-content:center;transition:all .2s;min-height:44px}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 4px 12px #4f46e530}
+.btn.g{background:#e2e8f0;color:#334155}.btn.g:hover{background:#cbd5e1;box-shadow:none}
+.btn.r{background:#dc2626}.btn.r:hover{background:#b91c1c;box-shadow:0 4px 12px #dc262630}
+.btn.ok{background:#16a34a}.btn.ok:hover{background:#15803d;box-shadow:0 4px 12px #16a34a30}
+.btn.sm{padding:6px 12px;font-size:13px;min-height:34px;border-radius:8px}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none!important}
+
+.bd{color:#fff;padding:4px 12px;border-radius:20px;font-size:12.5px;font-weight:600;white-space:nowrap;display:inline-flex;align-items:center;gap:4px}
+.row{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:14px 16px;border-radius:14px;border:1px solid var(--border);margin-bottom:10px;cursor:pointer;background:#fff;transition:all .2s}
+.row:hover{background:#f8fafc;border-color:#cbd5e1;transform:translateX(3px)}
+.row.u{border-left:6px solid #dc2626;background:#fff5f5}
+.row small{color:var(--m);display:block;margin-top:4px}
+.pager{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:16px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0;background:#f8fafc;padding:14px;border-radius:12px;border:1px solid #e2e8f0}
+.kv span{color:var(--m);font-size:12.5px;display:block;margin-bottom:2px}
+.kv b{color:var(--t);font-size:14.5px}
+
+.modal{position:fixed;inset:0;background:#00000080;backdrop-filter:blur(3px);z-index:100;display:none;overflow-y:auto;padding:16px}
+.modal.a{display:block;animation:fadeIn .2s}
+.modal .card{max-width:850px;margin:24px auto}
+.bar{background:#e2e8f0;border-radius:8px;height:10px;margin:4px 0 10px;overflow:hidden}
+.bar i{display:block;height:10px;border-radius:8px;background:var(--p);transition:width .4s}
+.filters{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:16px;background:#f8fafc;padding:14px;border-radius:14px;border:1px solid var(--border)}
+.stars{display:flex;gap:6px;margin:8px 0}
+.stars i{font-size:32px;color:#cbd5e1;cursor:pointer;transition:color .2s}
+.stars i.on{color:#f59e0b}
+footer{text-align:center;color:var(--m);font-size:13px;padding:24px 16px;border-top:1px solid var(--border);margin-top:30px}
+@media(max-width:640px){.stat b{font-size:24px}header h1{font-size:17px}}
+
+/* Login gate */
+#loginGate{position:fixed;inset:0;background:linear-gradient(135deg,#1e3a8a 0%,#4f46e5 55%,#7c3aed 100%);display:flex;align-items:center;justify-content:center;z-index:200;flex-direction:column;gap:20px;color:#fff;text-align:center;padding:20px}
+#loginGate .icon{font-size:56px;background:rgba(255,255,255,.15);border-radius:20px;padding:20px 26px}
+#loginGate h2{margin:0;font-size:22px}
+#loginGate p{opacity:.9;margin:0;max-width:340px}
+#loginGate .btn{background:#fff;color:#1e3a8a;font-size:16px;padding:13px 28px}
+#loginGate .btn:hover{background:#f1f5f9}
+#appRoot{display:none}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid #ffffff55;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- ============================================
+     CONFIG — แก้ค่าตรงนี้ให้ตรงกับของจริงในองค์กร
+     ============================================ -->
+<script>
+const CONFIG = {
+  // จาก Azure AD App Registration (Overview page)
+  TENANT_ID: 'YOUR_TENANT_ID',
+  CLIENT_ID: 'YOUR_CLIENT_ID',
+  // ปกติไม่ต้องแก้ จะจับ URL ของหน้านี้เองอัตโนมัติ
+  REDIRECT_URI: window.location.origin + window.location.pathname,
+
+  // จาก SharePoint site ที่สร้างไว้ เช่น https://contrologic.sharepoint.com/sites/IT_Helpdesk
+  SITE_HOSTNAME: 'contrologic.sharepoint.com',
+  SITE_PATH: '/sites/IT_Helpdesk',
+
+  // ชื่อ List ที่สร้างไว้สำหรับรับข้อมูลจากฟอร์ม
+  LIST_NAME: 'TicketsIntake',
+
+  // path ของไฟล์ Excel นับจากราก Document Library (เช็คจาก Power Automate ที่ตั้งค่าไว้)
+  EXCEL_FILE_PATH: '/IT-Helpdesk/IT_Helpdesk_Data.xlsx',
+  EXCEL_TABLE_TICKETS: 'Tickets',
+  EXCEL_TABLE_STAFF: 'Staff'
+};
+// รายชื่อ Admin/IT Staff อ่านสดจากชีต "Staff" ในไฟล์ Excel ทุกครั้งที่ login (แก้ผ่านหน้า "ตั้งค่า" ได้เลย ไม่ต้องแก้โค้ด)
+</script>
+
+<!-- Login gate: โชว์ก่อนเข้าเว็บได้ -->
+<div id="loginGate">
+  <div class="icon"><i class="fa-solid fa-computer"></i></div>
+  <h2>ระบบแจ้งปัญหาคอมพิวเตอร์</h2>
+  <p>Contrologic · เข้าสู่ระบบด้วยบัญชี Microsoft 365 ขององค์กรเพื่อใช้งาน</p>
+  <button class="btn" id="loginBtn" onclick="doLogin()"><i class="fa-brands fa-microsoft"></i> เข้าสู่ระบบด้วย Microsoft 365</button>
+</div>
+
+<div id="appRoot">
+<header>
+  <div class="logo"><i class="fa-solid fa-computer"></i></div>
+  <div>
+    <h1>ระบบแจ้งปัญหาคอมพิวเตอร์</h1>
+    <small>Contrologic · แจ้งง่าย ติดตามได้ แก้ไขไว ตรวจสอบได้</small>
+  </div>
+  <div class="header-actions">
+    <div class="role-badge">
+      <i class="fa-solid fa-circle"></i>
+      <span id="meDisplay">-</span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button>
+  </div>
+</header>
+
+<nav id="nav">
+  <button data-p="dash" class="a"><i class="fa-solid fa-chart-pie"></i> Dashboard</button>
+  <button data-p="new"><i class="fa-solid fa-pen-to-square"></i> แจ้งปัญหา</button>
+  <button data-p="mine"><i class="fa-solid fa-ticket"></i> Ticket ของฉัน</button>
+  <button data-p="track"><i class="fa-solid fa-magnifying-glass"></i> ติดตาม Ticket</button>
+  <button data-p="staff" class="st"><i class="fa-solid fa-screwdriver-wrench"></i> งาน IT</button>
+  <button data-p="report" class="st"><i class="fa-solid fa-chart-column"></i> รายงาน</button>
+  <button data-p="set" class="adm"><i class="fa-solid fa-gear"></i> ตั้งค่า</button>
+</nav>
+
+<main>
+  <!-- DASHBOARD -->
+  <section id="p-dash" class="pg a">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <button class="btn g sm" onclick="refreshAll()"><i class="fa-solid fa-rotate"></i> รีเฟรชข้อมูล</button>
+    </div>
+    <div class="grid stats" id="stats"><p style="color:#94a3b8">กำลังโหลดข้อมูล...</p></div>
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card"><h3><i class="fa-solid fa-chart-pie"></i> แยกตามประเภท</h3><canvas id="c1"></canvas></div>
+      <div class="card"><h3><i class="fa-solid fa-building"></i> แยกตามสถานที่</h3><canvas id="c2"></canvas></div>
+    </div>
+  </section>
+
+  <!-- แจ้งปัญหาใหม่ -->
+  <section id="p-new" class="pg">
+    <div class="card">
+      <h3><i class="fa-solid fa-pen-to-square"></i> แจ้งปัญหาคอมพิวเตอร์และอุปกรณ์ไอที</h3>
+      <form id="f" onsubmit="submitTicket(event)">
+        <div class="grid g2">
+          <div><label>ชื่อ-นามสกุล ผู้แจ้ง *</label><input name="name" id="fName" required></div>
+          <div><label>แผนก *</label><select name="dept" id="deptSel" required></select></div>
+          <div><label>เบอร์โทรศัพท์ติดต่อ *</label><input name="phone" type="tel" required placeholder="เช่น 081-234-5678"></div>
+          <div><label>Email ติดต่อ</label><input name="email" id="fEmail" type="email" readonly style="background:#f1f5f9"></div>
+          <div><label>สถานที่ *</label><select name="building" id="locSel" required></select></div>
+          <div><label>ST. / Asset ID</label><input name="assetId" placeholder="เช่น COM-045, NB-012"></div>
+          <div><label>ประเภทปัญหา *</label><select name="type" id="typeSel" required></select></div>
+          <div>
+            <label>ระดับความเร่งด่วน *</label>
+            <select name="priority" required>
+              <option value="ปกติ">🟢 ปกติ</option>
+              <option value="ปานกลาง">🟡 ปานกลาง</option>
+              <option value="เร่งด่วน">🟠 เร่งด่วน</option>
+              <option value="ด่วนมาก">🔴 ด่วนมาก</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:14px"><label>หัวข้อปัญหา *</label><input name="title" required placeholder="เช่น เปิดเครื่องแล้วจอดำ"></div>
+        <div style="margin-top:14px"><label>รายละเอียดปัญหาเพิ่มเติม *</label><textarea name="detail" required></textarea></div>
+        <div style="margin-top:20px">
+          <button class="btn" id="sb" type="submit"><i class="fa-solid fa-paper-plane"></i> ส่งแจ้งปัญหา</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Ticket ของฉัน -->
+  <section id="p-mine" class="pg">
+    <div class="card">
+      <h3><i class="fa-solid fa-ticket"></i> Ticket ของฉัน</h3>
+      <div id="mineList"><p style="color:#94a3b8">กำลังโหลด...</p></div>
+    </div>
+  </section>
+
+  <!-- ติดตาม Ticket -->
+  <section id="p-track" class="pg">
+    <div class="card">
+      <h3><i class="fa-solid fa-magnifying-glass"></i> ติดตามและตรวจสอบสถานะ Ticket</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="tid" placeholder="กรอกรหัสตั๋ว เช่น IT-25092026-0001" style="flex:1;min-width:240px;text-transform:uppercase">
+        <button class="btn" onclick="track()"><i class="fa-solid fa-magnifying-glass"></i> ค้นหาตั๋ว</button>
+      </div>
+      <div id="trackOut" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <!-- งาน IT (STAFF) -->
+  <section id="p-staff" class="pg">
+    <div class="card">
+      <h3><i class="fa-solid fa-screwdriver-wrench"></i> จัดการงานซ่อม IT</h3>
+      <div class="filters">
+        <input id="q" placeholder="🔍 ค้นหา: รหัส / ผู้แจ้ง / อาการ">
+        <select id="fs"></select>
+        <select id="fp"><option value="">ทุกความเร่งด่วน</option><option>ปกติ</option><option>ปานกลาง</option><option>เร่งด่วน</option><option>ด่วนมาก</option></select>
+        <button class="btn sm" onclick="loadStaff()"><i class="fa-solid fa-filter"></i> ค้นหา / กรอง</button>
+        <button class="btn g sm" onclick="refreshAll()"><i class="fa-solid fa-rotate"></i> รีเฟรช</button>
+      </div>
+      <div id="staffList"><p style="color:#94a3b8">กำลังโหลด...</p></div>
+    </div>
+  </section>
+
+  <!-- รายงาน -->
+  <section id="p-report" class="pg">
+    <div class="card">
+      <h3><i class="fa-solid fa-chart-column"></i> รายงานสถิติและผลการดำเนินงาน</h3>
+      <button class="btn ok sm" onclick="exportCsv()"><i class="fa-solid fa-file-csv"></i> Export CSV (ตั๋วทั้งหมด)</button>
+      <div id="repOut" style="margin-top:16px"></div>
+    </div>
+  </section>
+
+  <!-- ตั้งค่า (Admin เท่านั้น) — จัดการสิทธิ์ Admin/IT Staff -->
+  <section id="p-set" class="pg">
+    <div class="card">
+      <h3><i class="fa-solid fa-users-gear"></i> จัดการสิทธิ์ผู้ใช้งาน (Admin / IT Staff)</h3>
+      <p style="color:var(--m);font-size:13.5px">พนักงานที่ไม่อยู่ในรายชื่อนี้ เมื่อ login เข้ามาจะถือเป็น "User" ทั่วไปโดยอัตโนมัติ (แจ้งปัญหาได้ปกติ แต่เข้าเมนู "งาน IT" ไม่ได้)</p>
+      <div id="staffMgmtList" style="margin:14px 0"><p style="color:#94a3b8">กำลังโหลด...</p></div>
+      <hr style="border:0;border-top:1px solid #e2e8f0;margin:18px 0">
+      <h4 style="margin:0 0 10px">เพิ่มผู้ใช้งาน Admin / IT Staff</h4>
+      <div class="grid g3">
+        <input id="newStaffEmail" placeholder="อีเมล เช่น user@contrologic.co.th">
+        <input id="newStaffName" placeholder="ชื่อ-นามสกุล">
+        <select id="newStaffRole"><option>IT Staff</option><option>Admin</option></select>
+      </div>
+      <button class="btn sm" style="margin-top:10px" onclick="addStaffMember()"><i class="fa-solid fa-user-plus"></i> เพิ่ม</button>
+    </div>
+  </section>
+</main>
+
+<footer>ระบบแจ้งปัญหาคอมพิวเตอร์ · Contrologic — ข้อมูลเก็บบน SharePoint / Excel Online ขององค์กร</footer>
+
+<div class="modal" id="modal">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0"><i class="fa-solid fa-ticket"></i> รายละเอียด Ticket</h3>
+      <button class="btn g sm" onclick="closeM()"><i class="fa-solid fa-xmark"></i> ปิด</button>
+    </div>
+    <div id="mBody"></div>
+  </div>
+</div>
+</div><!-- /appRoot -->
+
+<script>
+// ==========================================
+// CONSTANTS
+// ==========================================
+const TYPES=['Computer','Notebook','Printer','Network / Internet','Wi-Fi','Projector','Software','Hardware','Email','Google Workspace','Account','ระบบเว็บไซต์','โปรแกรม','ระบบสารสนเทศ','อื่น ๆ'];
+const ST={'รอรับเรื่อง':['🟡','#f59e0b'],'รับเรื่องแล้ว':['🔵','#3b82f6'],'กำลังดำเนินการ':['🟣','#8b5cf6'],'รออะไหล่ / รอข้อมูล':['🟠','#f97316'],'แก้ไขแล้ว':['🟢','#22c55e'],'ปิดงาน':['⚫','#475569'],'ยกเลิก':['🔴','#ef4444']};
+const PRI={'ปกติ':['🟢','#16a34a'],'ปานกลาง':['🟡','#ca8a04'],'เร่งด่วน':['🟠','#ea580c'],'ด่วนมาก':['🔴','#dc2626']};
+const DEPTS=['LOG','ACF','HRS','PUR','ARD','KAD','PDM','AES','CES','STS','PPC','KBO','RBO'];
+const LOCS=['HQ','KBO','RBO'];
+const EXCEL_COLUMNS=['TicketID','CreatedAt','ReporterName','Department','Phone','Email','Building','AssetID','ProblemType','ProblemTitle','ProblemDetail','Priority','Status','AssignedTo','Resolution','RootCause','Rating','Feedback','ClosedAt'];
+
+const $ = s => document.querySelector(s);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const badge = (m, k) => `<span class="bd" style="background:${m[k]?m[k][1]:'#64748b'}">${m[k]?m[k][0]:''} ${esc(k)}</span>`;
+const opts = (arr, first) => (first ? `<option value="">${first}</option>` : '') + arr.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+let CURRENT_USER = null; // { name, email, role }
+let CACHE_TICKETS = null;
+let CACHE_TIME = 0;
+let STATE = { siteId:null, listId:null, excelItemId:null };
+
+const isStaff = () => CURRENT_USER && (CURRENT_USER.role === 'Admin' || CURRENT_USER.role === 'IT Staff');
+
+// ==========================================
+// MSAL LOGIN
+// ==========================================
+const msalInstance = new msal.PublicClientApplication({
+  auth: {
+    clientId: CONFIG.CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
+    redirectUri: CONFIG.REDIRECT_URI
+  },
+  cache: { cacheLocation: 'sessionStorage' }
+});
+
+const GRAPH_SCOPES = ['User.Read', 'Sites.ReadWrite.All', 'Files.ReadWrite.All'];
+
+async function doLogin(){
+  const btn = $('#loginBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> กำลังเข้าสู่ระบบ...';
+  try{
+    const result = await msalInstance.loginPopup({ scopes: GRAPH_SCOPES });
+    msalInstance.setActiveAccount(result.account);
+    await afterLogin(result.account);
+  }catch(err){
+    Swal.fire({icon:'error', title:'เข้าสู่ระบบไม่สำเร็จ', text: err.message || 'ลองใหม่อีกครั้ง หรือตรวจสอบว่าอนุญาต popup แล้ว'});
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-brands fa-microsoft"></i> เข้าสู่ระบบด้วย Microsoft 365';
+  }
+}
+
+function doLogout(){
+  const account = msalInstance.getActiveAccount();
+  msalInstance.logoutPopup({ account }).catch(()=>{});
+  location.reload();
+}
+
+async function getToken(){
+  const account = msalInstance.getActiveAccount();
+  try{
+    const result = await msalInstance.acquireTokenSilent({ scopes: GRAPH_SCOPES, account });
+    return result.accessToken;
+  }catch(e){
+    const result = await msalInstance.acquireTokenPopup({ scopes: GRAPH_SCOPES });
+    return result.accessToken;
+  }
+}
+
+async function graphFetch(url, options={}){
+  const token = await getToken();
+  const res = await fetch(url, {
+    ...options,
+    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type':'application/json', ...(options.headers||{}) }
+  });
+  if(!res.ok){
+    const text = await res.text().catch(()=> '');
+    throw new Error(`Graph API error (${res.status}): ${text}`);
+  }
+  if(res.status === 204) return null;
+  return res.json();
+}
+
+async function afterLogin(account){
+  const email = (account.username || '').toLowerCase();
+  let staffMatch = null;
+  try{
+    const staff = await fetchStaffListFresh();
+    staffMatch = staff.find(s => (s.Email||'').toLowerCase() === email);
+  }catch(err){
+    // ถ้าดึงชีต Staff ไม่ได้ (ยังตั้งค่าไม่ครบ) ให้ถือเป็น User ทั่วไปไปก่อน ไม่บล็อกการ login
+    console.error('โหลดรายชื่อ Staff ไม่สำเร็จ:', err);
+  }
+  CURRENT_USER = staffMatch
+    ? { name: staffMatch.Name, email: staffMatch.Email, role: staffMatch.Role, _rowIndex: staffMatch._rowIndex }
+    : { name: account.name || account.username, email: account.username, role: 'User' };
+
+  $('#loginGate').style.display = 'none';
+  $('#appRoot').style.display = 'block';
+  $('#meDisplay').textContent = `${CURRENT_USER.name} (${CURRENT_USER.role})`;
+  document.querySelectorAll('.st').forEach(b => b.style.display = isStaff() ? 'flex' : 'none');
+  document.querySelectorAll('.adm').forEach(b => b.style.display = (CURRENT_USER.role==='Admin') ? 'flex' : 'none');
+  $('#fName').value = CURRENT_USER.name;
+  $('#fEmail').value = CURRENT_USER.email;
+
+  boot();
+  await refreshAll();
+}
+
+// Try silent login on page load if already signed in this session
+window.addEventListener('load', async () => {
+  const accounts = msalInstance.getAllAccounts();
+  if(accounts.length > 0){
+    msalInstance.setActiveAccount(accounts[0]);
+    await afterLogin(accounts[0]);
+  }
+});
+
+// ==========================================
+// GRAPH: SITE / LIST / EXCEL HELPERS
+// ==========================================
+async function getSiteId(){
+  if(STATE.siteId) return STATE.siteId;
+  const data = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${CONFIG.SITE_HOSTNAME}:${CONFIG.SITE_PATH}`);
+  STATE.siteId = data.id;
+  return data.id;
+}
+
+async function getListId(){
+  if(STATE.listId) return STATE.listId;
+  const siteId = await getSiteId();
+  const data = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/lists?$filter=displayName eq '${CONFIG.LIST_NAME}'`);
+  STATE.listId = data.value[0].id;
+  return STATE.listId;
+}
+
+async function getExcelItemId(){
+  if(STATE.excelItemId) return STATE.excelItemId;
+  const siteId = await getSiteId();
+  const data = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/drive/root:${CONFIG.EXCEL_FILE_PATH}`);
+  STATE.excelItemId = data.id;
+  return STATE.excelItemId;
+}
+
+function rowToTicket(values, index){
+  const t = { _rowIndex: index };
+  EXCEL_COLUMNS.forEach((col, i) => t[col] = values[i] ?? '');
+  return t;
+}
+
+async function fetchAllTicketsFresh(){
+  const siteId = await getSiteId();
+  const itemId = await getExcelItemId();
+  const data = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/drive/items/${itemId}/workbook/tables('${CONFIG.EXCEL_TABLE_TICKETS}')/rows`);
+  const tickets = data.value.map(r => rowToTicket(r.values[0], r.index));
+  CACHE_TICKETS = tickets;
+  CACHE_TIME = Date.now();
+  return tickets;
+}
+
+async function getAllTickets(maxAgeMs = 15000){
+  if(CACHE_TICKETS && (Date.now() - CACHE_TIME) < maxAgeMs) return CACHE_TICKETS;
+  return fetchAllTicketsFresh();
+}
+
+async function patchTicketRow(ticket, changes){
+  const merged = { ...ticket, ...changes };
+  const values = EXCEL_COLUMNS.map(c => merged[c] ?? '');
+  const siteId = await getSiteId();
+  const itemId = await getExcelItemId();
+  await graphFetch(
+    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/items/${itemId}/workbook/tables('${CONFIG.EXCEL_TABLE_TICKETS}')/rows/itemAt(index=${ticket._rowIndex})`,
+    { method:'PATCH', body: JSON.stringify({ values: [values] }) }
+  );
+  await fetchAllTicketsFresh();
+}
+
+// ==========================================
+// GRAPH: STAFF TABLE (จัดการสิทธิ์ Admin / IT Staff)
+// ==========================================
+const STAFF_COLUMNS = ['Email','Name','Role'];
+let CACHE_STAFF = null;
+
+function staffRowToObj(values, index){
+  const s = { _rowIndex: index };
+  STAFF_COLUMNS.forEach((c,i)=> s[c]=values[i] ?? '');
+  return s;
+}
+
+async function fetchStaffListFresh(){
+  const siteId = await getSiteId();
+  const itemId = await getExcelItemId();
+  const data = await graphFetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/drive/items/${itemId}/workbook/tables('${CONFIG.EXCEL_TABLE_STAFF}')/rows`);
+  CACHE_STAFF = data.value.map(r => staffRowToObj(r.values[0], r.index));
+  return CACHE_STAFF;
+}
+
+async function addStaffMember(){
+  const email = $('#newStaffEmail').value.trim();
+  const name = $('#newStaffName').value.trim();
+  const role = $('#newStaffRole').value;
+  if(!email || !name) return Swal.fire({icon:'warning', title:'กรุณากรอกอีเมลและชื่อให้ครบ'});
+  try{
+    const siteId = await getSiteId();
+    const itemId = await getExcelItemId();
+    await graphFetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/drive/items/${itemId}/workbook/tables('${CONFIG.EXCEL_TABLE_STAFF}')/rows`, {
+      method:'POST', body: JSON.stringify({ values: [[email, name, role]] })
+    });
+    $('#newStaffEmail').value=''; $('#newStaffName').value='';
+    await Swal.fire({icon:'success', title:'เพิ่มสำเร็จ', timer:1000, showConfirmButton:false});
+    renderSettings();
+  }catch(err){
+    Swal.fire({icon:'error', title:'เพิ่มไม่สำเร็จ', text: err.message});
+  }
+}
+
+async function updateStaffRole(rowIndex, newRole){
+  const s = CACHE_STAFF.find(x=>x._rowIndex===rowIndex);
+  const siteId = await getSiteId();
+  const itemId = await getExcelItemId();
+  await graphFetch(
+    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/items/${itemId}/workbook/tables('${CONFIG.EXCEL_TABLE_STAFF}')/rows/itemAt(index=${rowIndex})`,
+    { method:'PATCH', body: JSON.stringify({ values: [[s.Email, s.Name, newRole]] }) }
+  );
+  await Swal.fire({icon:'success', title:'อัปเดตสำเร็จ', timer:1000, showConfirmButton:false});
+  renderSettings();
+}
+
+async function removeStaffMember(rowIndex){
+  const confirm = await Swal.fire({icon:'question', title:'ยืนยันลบสิทธิ์ผู้ใช้งานนี้?', showCancelButton:true, confirmButtonText:'ลบ'});
+  if(!confirm.isConfirmed) return;
+  const siteId = await getSiteId();
+  const itemId = await getExcelItemId();
+  await graphFetch(
+    `https://graph.microsoft.com/v1.0/sites/${siteId}/drive/items/${itemId}/workbook/tables('${CONFIG.EXCEL_TABLE_STAFF}')/rows/itemAt(index=${rowIndex})`,
+    { method:'DELETE' }
+  );
+  await Swal.fire({icon:'success', title:'ลบสำเร็จ', timer:1000, showConfirmButton:false});
+  renderSettings();
+}
+
+async function renderSettings(){
+  if(CURRENT_USER.role!=='Admin') return;
+  const staff = await fetchStaffListFresh();
+  $('#staffMgmtList').innerHTML = staff.length ? staff.map(s => `
+    <div class="row" style="cursor:default">
+      <div><b>${esc(s.Name)}</b><small>${esc(s.Email)}</small></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select onchange="updateStaffRole(${s._rowIndex}, this.value)" style="width:auto">
+          <option ${s.Role==='Admin'?'selected':''}>Admin</option>
+          <option ${s.Role==='IT Staff'?'selected':''}>IT Staff</option>
+        </select>
+        <button class="btn r sm" onclick="removeStaffMember(${s._rowIndex})"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`).join('') : '<p style="color:#94a3b8">ยังไม่มีรายชื่อ</p>';
+}
+
+// ==========================================
+// NAVIGATION
+// ==========================================
+function go(p){
+  document.querySelectorAll('.pg').forEach(e => e.classList.toggle('a', e.id === 'p-' + p));
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('a', b.dataset.p === p));
+  if(p === 'dash') renderDash();
+  if(p === 'mine') renderMine();
+  if(p === 'staff') loadStaff();
+  if(p === 'report') renderReport();
+  if(p === 'set') renderSettings();
+  window.scrollTo(0, 0);
+}
+
+function boot(){
+  document.querySelectorAll('#nav button').forEach(b => b.onclick = () => go(b.dataset.p));
+  $('#typeSel').innerHTML = opts(TYPES);
+  $('#deptSel').innerHTML = opts(DEPTS, '-- เลือกแผนก --');
+  $('#locSel').innerHTML = opts(LOCS, '-- เลือกสถานที่ --');
+  $('#fs').innerHTML = opts(Object.keys(ST), 'ทุกสถานะ');
+}
+
+async function refreshAll(){
+  try{
+    await fetchAllTicketsFresh();
+    const activePage = document.querySelector('.pg.a').id.replace('p-','');
+    go(activePage);
+  }catch(err){
+    Swal.fire({icon:'error', title:'โหลดข้อมูลไม่สำเร็จ', text: err.message});
+  }
+}
+
+// ==========================================
+// DASHBOARD
+// ==========================================
+let charts = {};
+function mk(id, type, labels, data){
+  if(charts[id]) charts[id].destroy();
+  const col = ['#4f46e5','#2563eb','#0ea5e9','#7c3aed','#14b8a6','#f59e0b','#ef4444','#64748b','#22c55e','#ec4899'];
+  const hasData = data.length > 0 && data.some(x => x > 0);
+  charts[id] = new Chart($('#' + id), {
+    type,
+    data: { labels: hasData?labels:['ยังไม่มีข้อมูล'], datasets: [{ data: hasData?data:[0], backgroundColor: col, borderColor:'#4f46e5', borderWidth:1 }] },
+    options: { responsive:true, plugins:{ legend:{ display:type==='doughnut' && hasData } } }
+  });
+}
+
+async function renderDash(){
+  const tickets = await getAllTickets();
+  let total=tickets.length, pending=0, inprogress=0, resolved=0, closed=0, urgent=0;
+  const byType={}, byBuilding={};
+  tickets.forEach(t=>{
+    const s=t.Status||'รอรับเรื่อง';
+    if(s==='รอรับเรื่อง') pending++;
+    else if(['รับเรื่องแล้ว','กำลังดำเนินการ','รออะไหล่ / รอข้อมูล'].includes(s)) inprogress++;
+    else if(s==='แก้ไขแล้ว') resolved++;
+    else if(s==='ปิดงาน') closed++;
+    if(t.Priority==='ด่วนมาก' && !['ปิดงาน','ยกเลิก'].includes(s)) urgent++;
+    byType[t.ProblemType]=(byType[t.ProblemType]||0)+1;
+    byBuilding[t.Building]=(byBuilding[t.Building]||0)+1;
+  });
+  $('#stats').innerHTML = [
+    ['แจ้งปัญหาทั้งหมด',total,'#4f46e5'],['รอดำเนินการ',pending,'#f59e0b'],
+    ['กำลังดำเนินการ',inprogress,'#8b5cf6'],['แก้ไขแล้ว',resolved,'#16a34a'],
+    ['ปิดงานแล้ว',closed,'#475569'],['ปัญหาด่วนมาก',urgent,'#dc2626']
+  ].map(x=>`<div class="stat" style="background:${x[2]}"><b>${esc(x[1])}</b><span>${x[0]}</span></div>`).join('');
+  mk('c1','doughnut',Object.keys(byType),Object.values(byType));
+  mk('c2','bar',Object.keys(byBuilding),Object.values(byBuilding));
+}
+
+// ==========================================
+// SUBMIT NEW TICKET (writes to SharePoint List, Power Automate does the rest)
+// ==========================================
+async function submitTicket(e){
+  e.preventDefault();
+  const f = e.target;
+  const g = n => f.elements[n].value.trim();
+  const sb = $('#sb');
+  sb.disabled = true;
+  sb.innerHTML = '<span class="spin"></span> กำลังส่ง...';
+
+  const fields = {
+    Title: `${g('name')} - ${g('title')}`,
+    ReporterName: g('name'),
+    Department: g('dept'),
+    Phone: g('phone'),
+    Email: g('email'),
+    Building: g('building'),
+    AssetID: g('assetId') || '-',
+    ProblemType: g('type'),
+    ProblemTitle: g('title'),
+    ProblemDetail: g('detail'),
+    Priority: g('priority')
+  };
+
+  try{
+    const siteId = await getSiteId();
+    const listId = await getListId();
+    await graphFetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items`, {
+      method:'POST', body: JSON.stringify({ fields })
+    });
+
+    Swal.fire({
+      icon:'success', title:'ส่งแจ้งปัญหาสำเร็จ',
+      text:'ระบบกำลังสร้าง Ticket ID ให้ (ใช้เวลาไม่กี่วินาที) กำลังค้นหา Ticket ของคุณ...',
+      timer: 2000, showConfirmButton:false
+    });
+
+    // Poll for the new row to appear in Excel (Power Automate runs async)
+    let found = null;
+    for(let i=0;i<12;i++){
+      await sleep(2500);
+      const rows = await fetchAllTicketsFresh();
+      found = rows.find(r => r.Email===g('email') && r.ProblemTitle===g('title') && r.ReporterName===g('name'));
+      if(found) break;
+    }
+
+    f.reset();
+    $('#fName').value = CURRENT_USER.name;
+    $('#fEmail').value = CURRENT_USER.email;
+
+    if(found){
+      Swal.fire({icon:'success', title:`Ticket ID: ${found.TicketID}`, text:'บันทึกข้อมูลเรียบร้อยแล้ว'});
+      go('track'); $('#tid').value = found.TicketID; track();
+    }else{
+      Swal.fire({icon:'info', title:'บันทึกคำขอแล้ว', text:'Ticket ID กำลังประมวลผล กรุณาเช็คที่เมนู "Ticket ของฉัน" อีกครั้งในอีกสักครู่'});
+      go('mine');
+    }
+  }catch(err){
+    Swal.fire({icon:'error', title:'ส่งไม่สำเร็จ', text: err.message});
+  }finally{
+    sb.disabled=false;
+    sb.innerHTML='<i class="fa-solid fa-paper-plane"></i> ส่งแจ้งปัญหา';
+  }
+}
+
+// ==========================================
+// LISTS: MINE / STAFF / TRACK
+// ==========================================
+function rowHtml(t){
+  const isUrgent = t.Priority==='ด่วนมาก' && !['ปิดงาน','ยกเลิก'].includes(t.Status);
+  return `<div class="row ${isUrgent?'u':''}" onclick='openM(${t._rowIndex})'>
+    <div>
+      <b style="color:#4f46e5;font-size:15.5px">${esc(t.TicketID)}</b> · <b>${esc(t.ProblemTitle)}</b>
+      <small>👤 ${esc(t.ReporterName)} · 🏢 ${esc(t.Building)} · 💻 ${esc(t.ProblemType)} · 🕒 ${esc(t.CreatedAt)}${t.AssignedTo?' · 👨‍💻 '+esc(t.AssignedTo):''}</small>
+    </div>
+    <div>${badge(PRI,t.Priority)} ${badge(ST,t.Status)}</div>
+  </div>`;
+}
+
+async function renderMine(){
+  const tickets = await getAllTickets();
+  const mine = tickets.filter(t => (t.Email||'').toLowerCase()===CURRENT_USER.email.toLowerCase());
+  $('#mineList').innerHTML = mine.length ? mine.map(rowHtml).join('') : '<p style="text-align:center;color:#94a3b8;padding:24px">ยังไม่มีรายการแจ้งปัญหาของคุณ</p>';
+}
+
+async function loadStaff(){
+  if(!isStaff()) return;
+  const tickets = await getAllTickets();
+  const q=($('#q').value||'').trim().toLowerCase();
+  const fs=$('#fs').value, fp=$('#fp').value;
+  const list = tickets.filter(t=>{
+    if(fs && t.Status!==fs) return false;
+    if(fp && t.Priority!==fp) return false;
+    if(q){
+      const match=[t.TicketID,t.ReporterName,t.ProblemTitle,t.ProblemType].join(' ').toLowerCase();
+      if(!match.includes(q)) return false;
+    }
+    return true;
+  });
+  $('#staffList').innerHTML = list.length ? list.map(rowHtml).join('') : '<p style="text-align:center;color:#94a3b8;padding:24px">ไม่พบข้อมูล</p>';
+}
+
+async function track(){
+  const id = $('#tid').value.trim().toUpperCase();
+  if(!id) return;
+  const tickets = await getAllTickets();
+  const t = tickets.find(x => x.TicketID.toUpperCase()===id);
+  if(!t) return $('#trackOut').innerHTML = `<div class="card" style="border-left:4px solid #ef4444"><p style="color:#dc2626;font-weight:600">❌ ไม่พบตั๋วรหัส: ${esc(id)}</p></div>`;
+  renderTicketDetail(t, $('#trackOut'));
+}
+
+function openM(rowIndex){
+  const t = CACHE_TICKETS.find(x => x._rowIndex===rowIndex);
+  $('#modal').classList.add('a');
+  renderTicketDetail(t, $('#mBody'));
+}
+function closeM(){ $('#modal').classList.remove('a'); }
+
+function renderTicketDetail(t, el){
+  const staffList = (CACHE_STAFF||[]).map(s=>s.Name);
+  const isOwner = (t.Email||'').toLowerCase()===CURRENT_USER.email.toLowerCase();
+  const canRate = ['แก้ไขแล้ว','ปิดงาน'].includes(t.Status) && !t.Rating && (isOwner||isStaff());
+  const isClosed = ['ปิดงาน','ยกเลิก'].includes(t.Status);
+
+  let html = `<div class="tk" data-row="${t._rowIndex}">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0;font-size:20px">🎫 ${esc(t.TicketID)}</h3>
+      <div>${badge(PRI,t.Priority)} ${badge(ST,t.Status)}</div>
+    </div>
+    <div class="kv">
+      <div><span>ผู้แจ้ง</span><b>${esc(t.ReporterName)}</b></div>
+      <div><span>แผนก</span><b>${esc(t.Department)}</b></div>
+      <div><span>เบอร์โทร</span><b>${esc(t.Phone)}</b></div>
+      <div><span>สถานที่</span><b>${esc(t.Building)}</b></div>
+      <div><span>ประเภทปัญหา</span><b>${esc(t.ProblemType)}</b></div>
+      <div><span>วันที่แจ้ง</span><b>${esc(t.CreatedAt)}</b></div>
+      <div><span>ผู้รับผิดชอบ</span><b>${esc(t.AssignedTo||'ยังไม่ระบุ')}</b></div>
+    </div>
+    <p><b>หัวข้อ:</b> ${esc(t.ProblemTitle)}</p>
+    <div style="background:#f1f5f9;padding:12px;border-radius:10px">${esc(t.ProblemDetail)}</div>`;
+
+  if(t.Resolution){
+    html += `<div style="background:#ecfdf5;border:1px solid #a7f3d0;padding:12px;border-radius:10px;margin-top:12px">
+      <p style="margin:0"><b>✅ วิธีแก้ไข:</b> ${esc(t.Resolution)}</p>
+      <p style="margin:0"><b>🔍 สาเหตุ:</b> ${esc(t.RootCause||'-')}</p></div>`;
+  }
+  if(t.Rating){
+    html += `<div style="background:#fefce8;border:1px solid #fef08a;padding:12px;border-radius:10px;margin-top:12px">
+      <b>⭐ ความพึงพอใจ:</b> ${'★'.repeat(Number(t.Rating))} ${t.Feedback?('<br>"'+esc(t.Feedback)+'"'):''}</div>`;
+  }
+
+  if(isStaff() && !isClosed){
+    html += `<hr style="margin:16px 0"><div style="background:#f8fafc;padding:16px;border-radius:12px;border:1px solid #cbd5e1">
+      <p><b>👨‍💻 มอบหมายงาน:</b></p>
+      <div class="grid g2"><select name="actStaff">${opts(staffList)}</select></div>
+      <button class="btn sm" style="margin-top:6px" onclick="doAssign(this)">บันทึกมอบหมายงาน</button>
+
+      <p style="margin-top:16px"><b>🔄 ปรับปรุงสถานะ:</b></p>
+      <div class="grid g2"><select name="actStatus">${opts(Object.keys(ST))}</select></div>
+      <button class="btn sm" style="margin-top:6px" onclick="doStatus(this)">อัปเดตสถานะ</button>
+
+      <p style="margin-top:16px"><b>⚫ ปิดงานซ่อม:</b></p>
+      <div class="grid g2">
+        <input name="cRes" placeholder="วิธีการแก้ไขปัญหา *">
+        <input name="cCause" placeholder="สาเหตุของปัญหา *">
+      </div>
+      <button class="btn r sm" style="margin-top:6px" onclick="doClose(this)">บันทึกปิดงาน</button>
+    </div>`;
+  }
+
+  if(canRate){
+    html += `<hr style="margin:16px 0"><div style="background:#fffbeb;padding:16px;border-radius:12px;border:1px solid #fde68a">
+      <b>⭐ ประเมินความพึงพอใจ:</b>
+      <div class="stars" data-v="0">${[1,2,3,4,5].map(i=>`<i class="fa-solid fa-star" data-i="${i}" onclick="clickStar(this)"></i>`).join('')}</div>
+      <input name="fbInput" placeholder="ความคิดเห็นเพิ่มเติม" style="margin:8px 0">
+      <button class="btn ok sm" onclick="doRate(this)">ส่งการประเมิน</button></div>`;
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+function clickStar(el){
+  const box=el.parentNode; const val=+el.dataset.i;
+  box.dataset.v=val;
+  box.querySelectorAll('i').forEach(s=>s.classList.toggle('on', +s.dataset.i<=val));
+}
+
+function getTicketFromEl(el){
+  const rowIndex = +el.closest('.tk').dataset.row;
+  return CACHE_TICKETS.find(x => x._rowIndex===rowIndex);
+}
+
+async function doAssign(btn){
+  const t = getTicketFromEl(btn);
+  const staff = btn.closest('.tk').querySelector('[name="actStaff"]').value;
+  if(!staff) return Swal.fire({icon:'warning',title:'กรุณาเลือกผู้รับผิดชอบ'});
+  const changes = { AssignedTo: staff };
+  if(t.Status==='รอรับเรื่อง') changes.Status='รับเรื่องแล้ว';
+  await patchTicketRow(t, changes);
+  await Swal.fire({icon:'success',title:'บันทึกสำเร็จ',timer:1000,showConfirmButton:false});
+  const updated = CACHE_TICKETS.find(x=>x.TicketID===t.TicketID);
+  renderTicketDetail(updated, btn.closest('.tk').parentNode);
+}
+
+async function doStatus(btn){
+  const t = getTicketFromEl(btn);
+  const status = btn.closest('.tk').querySelector('[name="actStatus"]').value;
+  await patchTicketRow(t, { Status: status });
+  await Swal.fire({icon:'success',title:'อัปเดตสำเร็จ',timer:1000,showConfirmButton:false});
+  const updated = CACHE_TICKETS.find(x=>x.TicketID===t.TicketID);
+  renderTicketDetail(updated, btn.closest('.tk').parentNode);
+}
+
+async function doClose(btn){
+  const t = getTicketFromEl(btn);
+  const box = btn.closest('.tk');
+  const res = box.querySelector('[name="cRes"]').value.trim();
+  const cause = box.querySelector('[name="cCause"]').value.trim();
+  if(!res || !cause) return Swal.fire({icon:'warning',title:'กรุณากรอกวิธีแก้ไขและสาเหตุให้ครบ'});
+  const confirm = await Swal.fire({icon:'question',title:'ยืนยันปิดงานนี้?',showCancelButton:true,confirmButtonText:'ปิดงาน'});
+  if(!confirm.isConfirmed) return;
+  await patchTicketRow(t, { Status:'ปิดงาน', Resolution:res, RootCause:cause, ClosedAt:new Date().toISOString() });
+  await Swal.fire({icon:'success',title:'ปิดงานสำเร็จ',timer:1000,showConfirmButton:false});
+  const updated = CACHE_TICKETS.find(x=>x.TicketID===t.TicketID);
+  renderTicketDetail(updated, box.parentNode);
+}
+
+async function doRate(btn){
+  const t = getTicketFromEl(btn);
+  const box = btn.closest('.tk');
+  const stars = +(box.querySelector('.stars').dataset.v||0);
+  if(!stars) return Swal.fire({icon:'warning',title:'กรุณาเลือกจำนวนดาว'});
+  const fb = box.querySelector('[name="fbInput"]').value.trim();
+  await patchTicketRow(t, { Rating: stars, Feedback: fb });
+  await Swal.fire({icon:'success',title:'ขอบคุณสำหรับการประเมิน',timer:1000,showConfirmButton:false});
+  const updated = CACHE_TICKETS.find(x=>x.TicketID===t.TicketID);
+  renderTicketDetail(updated, box.parentNode);
+}
+
+// ==========================================
+// REPORT / CSV EXPORT
+// ==========================================
+async function renderReport(){
+  const tickets = await getAllTickets();
+  const byStatus={}, byType={};
+  tickets.forEach(t=>{ byStatus[t.Status]=(byStatus[t.Status]||0)+1; byType[t.ProblemType]=(byType[t.ProblemType]||0)+1; });
+  const bars = obj => {
+    const max=Math.max(1,...Object.values(obj));
+    return Object.keys(obj).map(k=>`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between"><span>${esc(k)}</span><b>${obj[k]}</b></div><div class="bar"><i style="width:${(obj[k]/max)*100}%"></i></div></div>`).join('') || '<p style="color:#94a3b8">ไม่มีข้อมูล</p>';
+  };
+  $('#repOut').innerHTML = `<div class="grid g2">
+    <div class="card"><h3>แยกตามสถานะ</h3>${bars(byStatus)}</div>
+    <div class="card"><h3>แยกตามประเภทปัญหา</h3>${bars(byType)}</div>
+  </div>`;
+}
+
+async function exportCsv(){
+  const tickets = await getAllTickets();
+  if(!tickets.length) return Swal.fire({icon:'info',title:'ไม่มีข้อมูล'});
+  const rows=[EXCEL_COLUMNS];
+  tickets.forEach(t=> rows.push(EXCEL_COLUMNS.map(h=>`"${String(t[h]||'').replace(/"/g,'""')}"`)));
+  const csv='\ufeff'+rows.map(r=>r.join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`IT_Tickets_${Date.now()}.csv`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
